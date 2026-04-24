@@ -143,7 +143,8 @@ ${containerId.attribute}
 
 ## Доступ к контейнерам во время теста
 
-Библиотека регистрирует `InfraContainerRegistry` как Spring bean.
+Библиотека регистрирует `InfraContainerRegistry` как Spring bean в тестовом Spring context.
+Если на классе нет ни одного `@WithContainer`, реестр все равно будет доступен, но окажется пустым.
 
 ```java
 import io.github.stasbykov.spring.testcontainerwrapper.InfraContainerRegistry;

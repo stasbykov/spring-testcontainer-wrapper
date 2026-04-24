@@ -24,9 +24,6 @@ public final class InfraContainersContextCustomizerFactory implements ContextCus
             List<ContextConfigurationAttributes> configAttributes
     ) {
         List<ContainerDefinition> definitions = this.parser.parse(testClass);
-        if (definitions.isEmpty()) {
-            return null;
-        }
         boolean isolateContextPerClass = definitions.stream().anyMatch(definition -> definition.scope() == ContainerScope.CLASS);
         return new InfraContainersContextCustomizer(testClass, definitions, isolateContextPerClass);
     }

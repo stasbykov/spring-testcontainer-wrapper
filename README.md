@@ -143,7 +143,8 @@ ${containerId.attribute}
 
 ## Runtime Access to Started Containers
 
-The library registers `InfraContainerRegistry` as a Spring bean.
+The library registers `InfraContainerRegistry` as a Spring bean for Spring test contexts.
+If no `@WithContainer` annotations are declared, the registry is still available and will be empty.
 
 ```java
 import io.github.stasbykov.spring.testcontainerwrapper.InfraContainerRegistry;
