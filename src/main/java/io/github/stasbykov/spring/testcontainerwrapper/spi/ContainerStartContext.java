@@ -6,6 +6,9 @@ import io.github.stasbykov.spring.testcontainerwrapper.StartedInfraContainer;
 import java.util.Map;
 import java.util.Objects;
 
+/**
+ * Immutable input passed to an {@link InfraContainerProvider}.
+ */
 public final class ContainerStartContext {
 
     private final String id;
@@ -28,30 +31,55 @@ public final class ContainerStartContext {
         this.dependencies = Map.copyOf(Objects.requireNonNull(dependencies, "dependencies must not be null"));
     }
 
+    /**
+     * Returns the logical container id.
+     */
     public String id() {
         return this.id;
     }
 
+    /**
+     * Returns the lifecycle scope requested for the container.
+     */
     public ContainerScope scope() {
         return this.scope;
     }
 
+    /**
+     * Returns the test class requesting the container.
+     */
     public Class<?> testClass() {
         return this.testClass;
     }
 
+    /**
+     * Returns resolved container properties.
+     */
     public Map<String, String> properties() {
         return this.properties;
     }
 
+    /**
+     * Returns a single resolved property or {@code null} when absent.
+     */
     public String property(String name) {
         return this.properties.get(name);
     }
 
+    /**
+     * Returns started dependency containers indexed by id.
+     */
     public Map<String, StartedInfraContainer> dependencies() {
         return this.dependencies;
     }
 
+    /**
+     * Returns a required started dependency.
+     *
+     * @param id dependency id
+     * @return dependency container
+     * @throws IllegalArgumentException when the dependency is unknown
+     */
     public StartedInfraContainer dependency(String id) {
         StartedInfraContainer container = this.dependencies.get(id);
         if (container == null) {

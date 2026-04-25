@@ -13,7 +13,7 @@ A common Testcontainers setup in Spring projects is a large base test class with
 
 This library replaces that model with declarative container definitions using annotations and Spring TestContext integration.
 
-## Current MVP
+## Current Version
 
 The current version supports:
 
@@ -27,7 +27,7 @@ The current version supports:
 - built-in providers for PostgreSQL and Kafka
 - runtime access to started containers through `InfraContainerRegistry`
 
-The tested application itself is expected to run in-process through `@SpringBootTest` in the MVP.
+In the first version, the tested application itself is expected to run in-process through `@SpringBootTest`.
 
 ## Dependency
 
@@ -276,7 +276,7 @@ public final class FakeServicePropertyRegistrar implements DynamicPropertyRegist
 - `CLASS` containers are stopped after the test class.
 - `SHARED` containers live for the current JVM test run.
 
-## Limitations of the MVP
+## Current Limitations
 
 - no built-in Dockerized tested-application provider yet;
 - no meta-annotations yet;

@@ -11,6 +11,12 @@ import org.testcontainers.utility.DockerImageName;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+/**
+ * Built-in provider that starts a {@link PostgreSQLContainer}.
+ *
+ * <p>Supported properties: {@code imageName}, {@code databaseName}, {@code username},
+ * {@code password}, {@code reuse}.</p>
+ */
 public final class PostgreSqlContainerProvider implements InfraContainerProvider {
 
     private static final String DEFAULT_IMAGE = "postgres:16-alpine";

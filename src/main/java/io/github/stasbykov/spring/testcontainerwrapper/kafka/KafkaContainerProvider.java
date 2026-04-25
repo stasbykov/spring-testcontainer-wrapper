@@ -11,6 +11,11 @@ import org.testcontainers.utility.DockerImageName;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+/**
+ * Built-in provider that starts a {@link KafkaContainer}.
+ *
+ * <p>Supported properties: {@code imageName}, {@code reuse}.</p>
+ */
 public final class KafkaContainerProvider implements InfraContainerProvider {
 
     private static final String DEFAULT_IMAGE = "apache/kafka-native:3.8.0";

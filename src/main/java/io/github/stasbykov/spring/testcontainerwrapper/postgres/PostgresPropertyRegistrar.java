@@ -6,6 +6,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.test.context.DynamicPropertyRegistry;
 
+/**
+ * Registers standard Spring datasource properties from a PostgreSQL container.
+ */
 public final class PostgresPropertyRegistrar implements DynamicPropertyRegistrar {
 
     private static final Logger log = LoggerFactory.getLogger(PostgresPropertyRegistrar.class);
