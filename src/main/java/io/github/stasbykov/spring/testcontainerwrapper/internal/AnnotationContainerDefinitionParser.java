@@ -2,6 +2,8 @@ package io.github.stasbykov.spring.testcontainerwrapper.internal;
 
 import io.github.stasbykov.spring.testcontainerwrapper.WithContainer;
 import org.springframework.core.annotation.MergedAnnotations;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -10,6 +12,8 @@ import java.util.Map;
 
 final class AnnotationContainerDefinitionParser {
 
+    private static final Logger log = LoggerFactory.getLogger(AnnotationContainerDefinitionParser.class);
+
     List<ContainerDefinition> parse(Class<?> testClass) {
         List<WithContainer> annotations = MergedAnnotations.from(testClass, MergedAnnotations.SearchStrategy.TYPE_HIERARCHY)
                 .stream()
@@ -17,8 +21,10 @@ final class AnnotationContainerDefinitionParser {
                 .map(annotation -> (WithContainer) annotation.synthesize())
                 .toList();
         if (annotations.isEmpty()) {
+            log.debug("No @WithContainer annotations found on test class {}", testClass.getName());
             return List.of();
         }
+        log.debug("Found {} @WithContainer annotations on test class {}", annotations.size(), testClass.getName());
 
         Map<String, ContainerDefinition> definitionsById = new LinkedHashMap<>();
         for (WithContainer annotation : annotations) {
@@ -40,6 +46,7 @@ final class AnnotationContainerDefinitionParser {
             }
         }
         validateDependencies(testClass, definitionsById);
+        log.debug("Parsed container definitions for test class {}: {}", testClass.getName(), definitionsById.keySet());
         return List.copyOf(definitionsById.values());
     }
 

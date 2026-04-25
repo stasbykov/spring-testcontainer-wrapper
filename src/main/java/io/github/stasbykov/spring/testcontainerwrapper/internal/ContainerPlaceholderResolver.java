@@ -1,6 +1,8 @@
 package io.github.stasbykov.spring.testcontainerwrapper.internal;
 
 import io.github.stasbykov.spring.testcontainerwrapper.StartedInfraContainer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -10,12 +12,14 @@ import java.util.regex.Pattern;
 final class ContainerPlaceholderResolver {
 
     private static final Pattern PLACEHOLDER_PATTERN = Pattern.compile("\\$\\{([^}]+)}");
+    private static final Logger log = LoggerFactory.getLogger(ContainerPlaceholderResolver.class);
 
     Map<String, String> resolve(ContainerDefinition definition, Map<String, StartedInfraContainer> dependencies) {
         Map<String, String> resolved = new LinkedHashMap<>();
         for (Map.Entry<String, String> entry : definition.properties().entrySet()) {
             resolved.put(entry.getKey(), resolveValue(definition, entry.getValue(), dependencies));
         }
+        log.debug("Resolved properties for container '{}': {}", definition.id(), resolved.keySet());
         return Map.copyOf(resolved);
     }
 
@@ -41,6 +45,7 @@ final class ContainerPlaceholderResolver {
                         + dependencyId + "' in placeholder '${" + placeholder + "}'");
             }
             String replacement = dependency.attribute(attributeName);
+            log.debug("Resolved placeholder '${{{}}}' for container '{}' from dependency '{}'", placeholder, definition.id(), dependencyId);
             matcher.appendReplacement(buffer, Matcher.quoteReplacement(replacement));
         }
         matcher.appendTail(buffer);

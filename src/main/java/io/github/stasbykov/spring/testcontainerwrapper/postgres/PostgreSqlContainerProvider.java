@@ -3,6 +3,8 @@ package io.github.stasbykov.spring.testcontainerwrapper.postgres;
 import io.github.stasbykov.spring.testcontainerwrapper.StartedInfraContainer;
 import io.github.stasbykov.spring.testcontainerwrapper.spi.ContainerStartContext;
 import io.github.stasbykov.spring.testcontainerwrapper.spi.InfraContainerProvider;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
 
@@ -12,11 +14,14 @@ import java.util.Map;
 public final class PostgreSqlContainerProvider implements InfraContainerProvider {
 
     private static final String DEFAULT_IMAGE = "postgres:16-alpine";
+    private static final Logger log = LoggerFactory.getLogger(PostgreSqlContainerProvider.class);
 
     @Override
     public StartedInfraContainer start(ContainerStartContext context) {
+        String imageName = context.properties().getOrDefault("imageName", DEFAULT_IMAGE);
+        log.debug("Starting PostgreSQL container '{}' with image {}", context.id(), imageName);
         PostgreSQLContainer<?> container = new PostgreSQLContainer<>(DockerImageName.parse(
-                context.properties().getOrDefault("imageName", DEFAULT_IMAGE)
+                imageName
         ));
         if (context.properties().containsKey("databaseName")) {
             container.withDatabaseName(context.property("databaseName"));
@@ -31,6 +36,7 @@ public final class PostgreSqlContainerProvider implements InfraContainerProvider
             container.withReuse(Boolean.parseBoolean(context.property("reuse")));
         }
         container.start();
+        log.debug("PostgreSQL container '{}' started on {} with database '{}'", context.id(), container.getJdbcUrl(), container.getDatabaseName());
 
         Map<String, String> attributes = new LinkedHashMap<>();
         attributes.put("host", container.getHost());

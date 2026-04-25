@@ -4,6 +4,8 @@ import io.github.stasbykov.spring.testcontainerwrapper.ContainerScope;
 import io.github.stasbykov.spring.testcontainerwrapper.StartedInfraContainer;
 import io.github.stasbykov.spring.testcontainerwrapper.spi.ContainerStartContext;
 import io.github.stasbykov.spring.testcontainerwrapper.spi.InfraContainerProvider;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 
 import java.util.Map;
@@ -17,6 +19,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 final class ContainerManager {
 
     static final ContainerManager INSTANCE = new ContainerManager();
+    private static final Logger log = LoggerFactory.getLogger(ContainerManager.class);
 
     private final ConcurrentMap<SharedContainerKey, CompletableFuture<ManagedContainer>> sharedContainers = new ConcurrentHashMap<>();
     private final ConcurrentMap<ClassContainerKey, CompletableFuture<ManagedContainer>> classContainers = new ConcurrentHashMap<>();
@@ -38,8 +41,10 @@ final class ContainerManager {
     void stopClassContainers(Class<?> testClass) {
         Set<ClassContainerKey> keys = this.classOwnership.remove(testClass);
         if (keys == null || keys.isEmpty()) {
+            log.debug("No CLASS-scoped containers registered for test class {}", testClass.getName());
             return;
         }
+        log.debug("Stopping {} CLASS-scoped containers for test class {}", keys.size(), testClass.getName());
         for (ClassContainerKey key : keys) {
             CompletableFuture<ManagedContainer> future = this.classContainers.remove(key);
             if (future == null) {
@@ -47,6 +52,7 @@ final class ContainerManager {
             }
             ManagedContainer managedContainer = future.getNow(null);
             if (managedContainer != null) {
+                log.debug("Stopping CLASS-scoped container '{}'", managedContainer.container().id());
                 managedContainer.container().close();
             }
         }
@@ -76,15 +82,18 @@ final class ContainerManager {
         CompletableFuture<ManagedContainer> existing = this.sharedContainers.putIfAbsent(key, future);
         if (existing == null) {
             try {
+                log.debug("Creating SHARED container '{}' for test class {}", definition.id(), testClass.getName());
                 ManagedContainer container = createManagedContainer(testClass, definition, resolvedProperties, dependencies);
                 future.complete(container);
                 return container.container();
             } catch (Throwable ex) {
                 this.sharedContainers.remove(key, future);
                 future.completeExceptionally(ex);
+                log.error("Failed to create SHARED container '{}' for test class {}", definition.id(), testClass.getName(), ex);
                 throw ex;
             }
         }
+        log.debug("Reusing SHARED container '{}' for test class {}", definition.id(), testClass.getName());
         return existing.join().container();
     }
 
@@ -99,6 +108,7 @@ final class ContainerManager {
         CompletableFuture<ManagedContainer> existing = this.classContainers.putIfAbsent(key, future);
         if (existing == null) {
             try {
+                log.debug("Creating CLASS container '{}' for test class {}", definition.id(), testClass.getName());
                 ManagedContainer container = createManagedContainer(testClass, definition, resolvedProperties, dependencies);
                 this.classOwnership.computeIfAbsent(testClass, ignored -> ConcurrentHashMap.newKeySet()).add(key);
                 future.complete(container);
@@ -106,10 +116,12 @@ final class ContainerManager {
             } catch (Throwable ex) {
                 this.classContainers.remove(key, future);
                 future.completeExceptionally(ex);
+                log.error("Failed to create CLASS container '{}' for test class {}", definition.id(), testClass.getName(), ex);
                 throw ex;
             }
         }
         this.classOwnership.computeIfAbsent(testClass, ignored -> ConcurrentHashMap.newKeySet()).add(key);
+        log.debug("Reusing CLASS container '{}' within test class {}", definition.id(), testClass.getName());
         return existing.join().container();
     }
 
@@ -120,6 +132,7 @@ final class ContainerManager {
             Map<String, StartedInfraContainer> dependencies
     ) {
         InfraContainerProvider provider = BeanUtils.instantiateClass(definition.providerType());
+        log.debug("Starting provider {} for container '{}' in scope {}", definition.providerType().getName(), definition.id(), definition.scope());
         StartedInfraContainer started = provider.start(new ContainerStartContext(
                 definition.id(),
                 definition.scope(),
@@ -144,13 +157,16 @@ final class ContainerManager {
         if (!this.shutdownHookRegistered.compareAndSet(false, true)) {
             return;
         }
+        log.debug("Registering JVM shutdown hook for SHARED containers");
         Runtime.getRuntime().addShutdownHook(new Thread(this::shutdownSharedContainers, "infra-containers-shutdown"));
     }
 
     private void shutdownSharedContainers() {
+        log.debug("Shutting down {} SHARED containers", this.sharedContainers.size());
         for (CompletableFuture<ManagedContainer> future : this.sharedContainers.values()) {
             ManagedContainer container = future.getNow(null);
             if (container != null) {
+                log.debug("Stopping SHARED container '{}'", container.container().id());
                 container.container().close();
             }
         }
