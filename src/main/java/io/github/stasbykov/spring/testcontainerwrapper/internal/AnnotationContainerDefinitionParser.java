@@ -4,8 +4,10 @@ import io.github.stasbykov.spring.testcontainerwrapper.WithContainer;
 import org.springframework.core.annotation.MergedAnnotations;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.test.context.TestContextAnnotationUtils;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -15,16 +17,50 @@ final class AnnotationContainerDefinitionParser {
     private static final Logger log = LoggerFactory.getLogger(AnnotationContainerDefinitionParser.class);
 
     List<ContainerDefinition> parse(Class<?> testClass) {
-        List<WithContainer> annotations = MergedAnnotations.from(testClass, MergedAnnotations.SearchStrategy.TYPE_HIERARCHY)
+        List<Class<?>> declarationClasses = resolveDeclarationClasses(testClass);
+        Map<String, ContainerDefinition> definitionsById = new LinkedHashMap<>();
+        for (Class<?> declarationClass : declarationClasses) {
+            Map<String, ContainerDefinition> classDefinitions = parseClassDefinitions(testClass, declarationClass);
+            for (ContainerDefinition definition : classDefinitions.values()) {
+                if (definitionsById.containsKey(definition.id())) {
+                    definitionsById.remove(definition.id());
+                }
+                definitionsById.put(definition.id(), definition);
+            }
+        }
+        if (definitionsById.isEmpty()) {
+            log.debug("No @WithContainer annotations found on test class {}", testClass.getName());
+            return List.of();
+        }
+        validateDependencies(testClass, definitionsById);
+        log.debug("Parsed container definitions for test class {} from declaration classes {}: {}",
+                testClass.getName(), declarationClasses.stream().map(Class::getName).toList(), definitionsById.keySet());
+        return List.copyOf(definitionsById.values());
+    }
+
+    private List<Class<?>> resolveDeclarationClasses(Class<?> testClass) {
+        List<Class<?>> declarationClasses = new ArrayList<>();
+        Class<?> current = testClass;
+        declarationClasses.add(current);
+        while (TestContextAnnotationUtils.searchEnclosingClass(current)) {
+            current = current.getEnclosingClass();
+            declarationClasses.add(current);
+        }
+        Collections.reverse(declarationClasses);
+        return List.copyOf(declarationClasses);
+    }
+
+    private Map<String, ContainerDefinition> parseClassDefinitions(Class<?> testClass, Class<?> declarationClass) {
+        List<WithContainer> annotations = MergedAnnotations.from(declarationClass, MergedAnnotations.SearchStrategy.TYPE_HIERARCHY)
                 .stream()
                 .filter(annotation -> annotation.getType().equals(WithContainer.class))
                 .map(annotation -> (WithContainer) annotation.synthesize())
                 .toList();
         if (annotations.isEmpty()) {
-            log.debug("No @WithContainer annotations found on test class {}", testClass.getName());
-            return List.of();
+            return Map.of();
         }
-        log.debug("Found {} @WithContainer annotations on test class {}", annotations.size(), testClass.getName());
+        log.debug("Found {} @WithContainer annotations on declaration class {} for test class {}",
+                annotations.size(), declarationClass.getName(), testClass.getName());
 
         Map<String, ContainerDefinition> definitionsById = new LinkedHashMap<>();
         for (WithContainer annotation : annotations) {
@@ -42,12 +78,11 @@ final class AnnotationContainerDefinitionParser {
             );
             ContainerDefinition previous = definitionsById.putIfAbsent(id, definition);
             if (previous != null) {
-                throw new IllegalStateException("Duplicate container id '" + id + "' on test class " + testClass.getName());
+                throw new IllegalStateException("Duplicate container id '" + id + "' on declaration class "
+                        + declarationClass.getName() + " for test class " + testClass.getName());
             }
         }
-        validateDependencies(testClass, definitionsById);
-        log.debug("Parsed container definitions for test class {}: {}", testClass.getName(), definitionsById.keySet());
-        return List.copyOf(definitionsById.values());
+        return definitionsById;
     }
 
     private Map<String, String> parseProperties(Class<?> testClass, String id, String[] rawProperties) {
