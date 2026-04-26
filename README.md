@@ -37,7 +37,7 @@ Add the library as a test dependency:
 <dependency>
     <groupId>io.github.stasbykov</groupId>
     <artifactId>spring-testcontainer-wrapper</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>1.0.1</version>
     <scope>test</scope>
 </dependency>
 ```
