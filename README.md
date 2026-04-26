@@ -104,6 +104,98 @@ Use it for:
 - containers with test-specific state;
 - cases where Spring context reuse must not leak infrastructure state.
 
+## Using with `@Nested`
+
+The library supports JUnit 5 `@Nested` classes.
+
+- container declarations from the outer test class are inherited by nested classes by default;
+- a nested class may add its own `@WithContainer` declarations;
+- if a nested class declares the same container `id`, it overrides the outer declaration.
+
+Example:
+
+```java
+import io.github.stasbykov.spring.testcontainerwrapper.ContainerScope;
+import io.github.stasbykov.spring.testcontainerwrapper.InfraContainerRegistry;
+import io.github.stasbykov.spring.testcontainerwrapper.WithContainer;
+import io.github.stasbykov.spring.testcontainerwrapper.kafka.KafkaContainerProvider;
+import io.github.stasbykov.spring.testcontainerwrapper.kafka.KafkaPropertyRegistrar;
+import io.github.stasbykov.spring.testcontainerwrapper.postgres.PostgreSqlContainerProvider;
+import io.github.stasbykov.spring.testcontainerwrapper.postgres.PostgresPropertyRegistrar;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.core.env.Environment;
+import org.springframework.test.context.TestPropertySource;
+
+@SpringBootTest
+@WithContainer(
+        id = "postgres",
+        provider = PostgreSqlContainerProvider.class,
+        scope = ContainerScope.SHARED,
+        properties = {
+                "databaseName=orders",
+                "username=orders_user",
+                "password=orders_pass"
+        },
+        propertyRegistrar = PostgresPropertyRegistrar.class
+)
+@WithContainer(
+        id = "kafka",
+        provider = KafkaContainerProvider.class,
+        scope = ContainerScope.SHARED,
+        propertyRegistrar = KafkaPropertyRegistrar.class
+)
+class OrderServiceNestedTest {
+
+    @Nested
+    class DefaultFlow {
+
+        @Autowired
+        private InfraContainerRegistry registry;
+
+        @Test
+        void usesContainersFromOuterClass() {
+            registry.get("postgres");
+            registry.get("kafka");
+        }
+    }
+
+    @Nested
+    @TestPropertySource(properties = "feature.orders.enabled=true")
+    class FeatureFlagFlow {
+
+        @Autowired
+        private Environment environment;
+
+        @Autowired
+        private InfraContainerRegistry registry;
+
+        @Test
+        void canUseInheritedContainersWithNestedSpecificProperties() {
+            environment.getProperty("feature.orders.enabled");
+            registry.get("postgres");
+        }
+    }
+}
+```
+
+Recommended scope choice for nested tests:
+
+- prefer `ContainerScope.SHARED` for common infrastructure such as PostgreSQL or Kafka;
+- use `ContainerScope.CLASS` only when you explicitly need isolation per nested class.
+
+This recommendation is important because each `@Nested` class is treated as a separate test class by the library.
+As a result:
+
+- `SHARED` containers are reused across nested classes when the configuration is the same;
+- `CLASS` containers are created separately for each nested class, which can start unnecessary extra containers.
+
+If a nested class has its own Spring test configuration, for example `@TestPropertySource`, inject `Environment`,
+`InfraContainerRegistry`, and other Spring-managed dependencies into that nested class directly.
+This ensures you work with the actual context created for that nested class.
+
 ## Dependencies Between Containers
 
 You can declare startup dependencies and reference attributes from already started containers.
@@ -290,7 +382,3 @@ Run the test suite:
 ```bash
 mvn test
 ```
-
-## Russian Documentation
-
-Russian documentation is available in [README.ru.md](README.ru.md).

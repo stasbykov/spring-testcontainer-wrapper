@@ -16,6 +16,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -123,6 +124,30 @@ class ContainerBootstrapperTest {
         ContainerManager.INSTANCE.stopClassContainers(TestClassA.class);
 
         assertEquals(1, RecordingInfraContainerProvider.closeCount());
+    }
+
+    @Test
+    void createsSeparateClassScopedContainersForDifferentTestClasses() {
+        List<ContainerDefinition> definitions = List.of(
+                new ContainerDefinition(
+                        "postgres",
+                        RecordingInfraContainerProvider.class,
+                        ContainerScope.CLASS,
+                        Map.of("attr.jdbcUrl", "jdbc:test"),
+                        List.of(),
+                        NoOpDynamicPropertyRegistrar.class
+                )
+        );
+
+        StartedInfraContainer containerA = this.bootstrapper.bootstrap(TestClassA.class, definitions)
+                .containersById()
+                .get("postgres");
+        StartedInfraContainer containerB = this.bootstrapper.bootstrap(TestClassB.class, definitions)
+                .containersById()
+                .get("postgres");
+
+        assertNotSame(containerA, containerB);
+        assertEquals(2, RecordingInfraContainerProvider.startCount());
     }
 
     @Test
