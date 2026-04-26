@@ -27,19 +27,19 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 )
 class NestedInfraContainersSpringBootIntegrationTest {
 
-    @Autowired
-    private Environment environment;
-
-    @Autowired
-    private InfraContainerRegistry registry;
-
     @Nested
     class InheritedContainers {
 
+        @Autowired
+        private Environment environment;
+
+        @Autowired
+        private InfraContainerRegistry registry;
+
         @Test
         void inheritsContainersFromEnclosingTestClass() {
-            assertEquals("jdbc:postgresql://localhost:5432/nested", environment.getProperty("it.jdbc-url"));
-            assertNotNull(registry.get("postgres"));
+            assertEquals("jdbc:postgresql://localhost:5432/nested", this.environment.getProperty("it.jdbc-url"));
+            assertNotNull(this.registry.get("postgres"));
         }
     }
 
@@ -47,11 +47,17 @@ class NestedInfraContainersSpringBootIntegrationTest {
     @TestPropertySource(properties = "nested.flag=enabled")
     class NestedWithTestPropertySource {
 
+        @Autowired
+        private Environment environment;
+
+        @Autowired
+        private InfraContainerRegistry registry;
+
         @Test
         void keepsInheritedContainersWhenNestedClassAddsTestProperties() {
-            assertEquals("enabled", environment.getProperty("nested.flag"));
-            assertEquals("jdbc:postgresql://localhost:5432/nested", environment.getProperty("it.jdbc-url"));
-            assertNotNull(registry.get("postgres"));
+            assertEquals("enabled", this.environment.getProperty("nested.flag"));
+            assertEquals("jdbc:postgresql://localhost:5432/nested", this.environment.getProperty("it.jdbc-url"));
+            assertNotNull(this.registry.get("postgres"));
         }
     }
 
