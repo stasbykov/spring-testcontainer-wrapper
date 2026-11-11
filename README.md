@@ -1,5 +1,11 @@
 # spring-testcontainer-wrapper
 
+[![CI](https://github.com/stasbykov/spring-testcontainer-wrapper/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/stasbykov/spring-testcontainer-wrapper/actions/workflows/ci.yml)
+[![Java 21+](https://img.shields.io/badge/Java-21%2B-orange?logo=openjdk&logoColor=white)](https://openjdk.org/projects/jdk/21/)
+[![Spring Boot 3.5.4](https://img.shields.io/badge/Spring%20Boot-3.5.4-6DB33F?logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
+[![Maven](https://img.shields.io/badge/Build-Maven-C71A36?logo=apachemaven&logoColor=white)](https://maven.apache.org/)
+[![MIT License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 `spring-testcontainer-wrapper` is a test library for Spring Boot + JUnit 5 that lets you declare Testcontainers infrastructure directly on a test class without using a shared base test class.
 
 ## Why
